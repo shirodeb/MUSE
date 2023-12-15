@@ -5,14 +5,23 @@
 // @description  Make Uploading Software Easy, an userscript for reduce some bored click in Dev center of UOS.
 // @author       Shiroko <hhx.xxm@gmail.com>
 // @match        https://appstore-dev.uniontech.com/
+// @match        https://appstore-dev.uniontech.com/*
 // @icon         https://appstore-dev.uniontech.com/favicon.ico
-// @grant        none
-// @require http://code.jquery.com/jquery-latest.js
+// @grant none
+// @require      http://code.jquery.com/jquery-latest.js
+// @require      https://cdn.bootcss.com/jquery-toast-plugin/1.3.2/jquery.toast.min.js
+// @resource     https://cdn.bootcss.com/jquery-toast-plugin/1.3.2/jquery.toast.css
+
 // ==/UserScript==
 
 (function () {
     'use strict';
 
+    $("head").append (
+    '<link '
+  + 'href="https://cdn.bootcss.com/jquery-toast-plugin/1.3.2/jquery.toast.css" '
+  + 'rel="stylesheet" type="text/css">'
+);
 
     const fill_form = async () => {
         console.log("Fill default message");
@@ -99,6 +108,7 @@
                 let name = lines[0].trim();
                 let homepage = lines[1].trim();
                 let author = lines[2].trim();
+                if (author.length === 0) author = `${name} developer(s)`;
                 let desc1 = lines[3].trim();
                 let desc2 = lines.slice(4).join('\n').trim();
                 // fill
@@ -153,7 +163,10 @@
     ver_sel_all_btn.css({ 'position': 'absolute', 'left': '1rem', 'top': '5rem' });
     ver_sel_all_btn.click(async () => {
         let inputs = $("[aria-label='系统版本'] [class*='el-dialog__body'] td[class='td-line'] input[type='checkbox']")
+        const allow_list=['专业版', '家庭版', '教育版', '学生版']
         for (let i = 0; i < 5; i++) {
+            const name = $(inputs[i]).parent().parent().text().trim()
+            if(allow_list.indexOf(name) < 0) continue;
             inputs[i].click();
             await new Promise(r => setTimeout(r, 150));
         }
@@ -180,12 +193,49 @@
             } catch {
             }
         });
+
+        const blur_btn = $('<button>blur</button>').click(() => {
+            let app_name_selector = '[placeholder="请输入应用名称，60字以内"]';
+            let breif_selector = '[placeholder="请输入一句话介绍，100字以内"]';
+            let desc_selector = '[placeholder="请输入应用介绍，1000字以内"]';
+            let dev_name_selector = '[placeholder="请输入开发者名称，将展示在应用商店详情页"]';
+            let tab = $("[id='pane-zh_CN'][role='tabpanel']");
+
+            tab.find(app_name_selector)[0].dispatchEvent(new Event('input'));
+            tab.find(breif_selector)[0].dispatchEvent(new Event('input'));
+            tab.find(desc_selector)[0].dispatchEvent(new Event('input'));
+            tab.find(dev_name_selector)[0].dispatchEvent(new Event('input'));
+
+            $.toast('blured');
+        });
+        setTimeout(() => {
+            $('[class="footer-btn"]').append(blur_btn);
+        }, 1000);
     };
 
     $('document').ready(() => {
-        //if(window.location.hash === "#/management-detial?type=2")
-        inject_code();
-
+        // if(window.location.hash === "#/management-detial?type=2")
+        // inject_code();
     });
+
+    var run = (url)=> {
+       // insert your code here
+        console.log(url);
+        if(url.startsWith("https://appstore-dev.uniontech.com/#/management-detial"))
+        inject_code();
+    };
+
+    var pS = window.history.pushState;
+    var rS = window.history.replaceState;
+
+    window.history.pushState = function(a, b, url) {
+        run(url);
+        pS.apply(this, arguments);
+    };
+
+    window.history.replaceState = function(a, b, url) {
+        run(url);
+        rS.apply(this, arguments);
+    };
 
 })();
